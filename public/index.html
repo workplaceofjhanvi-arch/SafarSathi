@@ -8,40 +8,45 @@
 </head>
 <body>
   <header>
+    <button id="langBtn">हिंदी</button>
     <h1>SafarSathi</h1>
-    <p>Smart bus companion for Himachal Pradesh</p>
+    <p data-i18n="tagline">Smart bus companion for Himachal Pradesh</p>
   </header>
 
   <main>
     <section id="view-home" class="view active">
-      <label for="district">Choose your district</label>
+      <label for="district" data-i18n="chooseDistrict">Choose your district</label>
       <select id="district"></select>
-      <button id="downloadBtn">Download district data</button>
+      <button id="downloadBtn" data-i18n="download">Download district data</button>
       <p id="status" class="note"></p>
-      <h2>Buses</h2>
+      <h2 data-i18n="buses">Buses</h2>
       <div id="busList"></div>
     </section>
 
     <section id="view-scan" class="view">
-      <label for="busId">Bus number</label>
-      <input id="busId" placeholder="e.g. HP01A1001">
-      <button id="scanBtn" class="gold">Scan bus QR</button>
+      <label for="busId" data-i18n="busNumber">Bus number</label>
+      <input id="busId" data-i18n-ph="busPh" placeholder="e.g. HP01A1001">
+      <button id="scanBtn" class="gold" data-i18n="scanQR">Scan bus QR</button>
       <div id="reader"></div>
-      <label for="stopName">Your stop</label>
-      <input id="stopName" placeholder="e.g. Chhota Shimla">
-      <button id="checkBtn" class="green">Check</button>
+      <label for="stopName" data-i18n="yourStop">Your stop</label>
+      <input id="stopName" data-i18n-ph="stopPh" placeholder="e.g. Chhota Shimla">
+      <button id="checkBtn" class="green" data-i18n="check">Check</button>
       <div id="result"></div>
     </section>
 
     <section id="view-alerts" class="view">
-      <p class="note">Wake-me alarm comes in a later step.</p>
+      <p class="note" data-i18n="alertsNote">First check a bus on the Scan tab (answer must be YES), then come here.</p>
+      <button id="alarmBtn" class="green" data-i18n="wake">Wake me up before my stop</button>
+      <button id="testAlarmBtn" class="gold" data-i18n="test">Test alarm (10 seconds)</button>
+      <button id="stopAlarmBtn" class="green" data-i18n="stopAlarm">Stop alarm</button>
+      <p id="alarmStatus" class="note"></p>
     </section>
   </main>
 
   <nav>
-    <button class="tab active" data-view="view-home">Home</button>
-    <button class="tab" data-view="view-scan">Scan</button>
-    <button class="tab" data-view="view-alerts">Alerts</button>
+    <button class="tab active" data-view="view-home" data-i18n="tabHome">Home</button>
+    <button class="tab" data-view="view-scan" data-i18n="tabScan">Scan</button>
+    <button class="tab" data-view="view-alerts" data-i18n="tabAlerts">Alerts</button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>

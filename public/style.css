@@ -1,8 +1,9 @@
 * { box-sizing: border-box; }
 body { margin: 0; font-family: Arial, sans-serif; background: #f4f7f2; color: #1f2d1f; padding-bottom: 70px; }
-header { background: #1b5e20; color: #fff; padding: 16px; text-align: center; border-bottom: 4px solid #f9a825; }
+header { position: relative; background: #1b5e20; color: #fff; padding: 16px; text-align: center; border-bottom: 4px solid #f9a825; }
 header h1 { margin: 0; font-size: 24px; }
 header p { margin: 4px 0 0; font-size: 13px; color: #ffe082; }
+#langBtn { position: absolute; right: 12px; top: 14px; background: #f9a825; color: #1f2d1f; border: none; border-radius: 14px; padding: 6px 12px; font-weight: bold; cursor: pointer; }
 main { max-width: 500px; margin: 0 auto; padding: 16px; }
 .view { display: none; }
 .view.active { display: block; }
@@ -24,3 +25,16 @@ h2 { color: #1b5e20; margin-top: 20px; }
 nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #1b5e20; }
 .tab { flex: 1; padding: 16px 0; background: none; border: none; color: #fff; font-size: 15px; cursor: pointer; }
 .tab.active { background: #2e7d32; border-top: 3px solid #f9a825; }
+input { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #1b5e20; border-radius: 8px; margin-bottom: 12px; }
+button.gold, button.green { width: 100%; padding: 12px; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 12px; }
+button.gold { background: #f9a825; color: #1f2d1f; }
+button.green { background: #1b5e20; color: #fff; }
+#reader { width: 100%; margin-bottom: 12px; }
+.answer { text-align: center; border-radius: 14px; padding: 24px 12px; color: #fff; margin-top: 8px; }
+.answer.yes { background: #2e7d32; }
+.answer.no { background: #c62828; }
+.answer .big { font-size: 56px; font-weight: bold; }
+.answer .sub { font-size: 16px; margin-top: 6px; }
+.stoplist { background: #fff; border-radius: 10px; padding: 12px; margin-top: 12px; }
+.stoplist div { padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+.stoplist .mine { background: #fff8e1; font-weight: bold; border-left: 4px solid #f9a825; padding-left: 8px; }
