@@ -80,3 +80,82 @@ $('district').addEventListener('change', showBuses);
 $('downloadBtn').addEventListener('click', downloadDistrict);
 
 loadDistricts().then(showBuses);
+
+function parseBusId(text) {
+  return text.trim().split('/').pop().toUpperCase();
+}
+
+let scanner;
+$('scanBtn').addEventListener('click', () => {
+  if (typeof Html5Qrcode === 'undefined') { alert('Scanner not loaded. Type the bus number instead.'); return; }
+  scanner = new Html5Qrcode('reader');
+  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, (text) => {
+    $('busId').value = parseBusId(text);
+    scanner.stop().then(() => scanner.clear());
+  }).catch(() => alert('Camera not available. Type the bus number instead.'));
+});
+
+function checkOffline(busId, stop) {
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith('data:')) continue;
+    const data = JSON.parse(localStorage.getItem(key));
+    const bus = data.buses.find((b) => b.id === busId);
+    if (!bus) continue;
+    const stops = data.routes.find((r) => r.id === bus.route_id).stops;
+    const idx = (n, list) => list.findIndex((s) => s.name.toLowerCase() === n.toLowerCase());
+    const i = idx(stop, stops);
+    const goes = i > 0;
+    const next = [];
+    if (!goes) {
+      data.buses.forEach((b) => {
+        if (b.id === busId) return;
+        const st = data.routes.find((r) => r.id === b.route_id).stops;
+        const a = idx(stops[0].name, st), z = idx(stop, st);
+        if (a >= 0 && z > a) next.push(b);
+      });
+    }
+    return {
+      goes, bus, from: stops[0].name, to: stop, stops,
+      stop_number: goes ? stops[i].seq : null, total_stops: stops.length, next_buses: next
+    };
+  }
+  return null;
+}
+
+function renderResult(d) {
+  const mine = (s) => s.name.toLowerCase() === d.to.toLowerCase();
+  const stopsHtml = d.stops.map((s) =>
+    `<div class="${mine(s) ? 'mine' : ''}">${s.seq}. ${s.name} (${s.name_hi || ''}) +${s.offset_min} min</div>`).join('');
+  let html;
+  if (d.goes) {
+    html = `<div class="answer yes"><div class="big">YES</div>
+      <div class="sub">${d.bus.id} goes to ${d.to}. Stop ${d.stop_number} of ${d.total_stops}.</div></div>
+      <div class="stoplist"><b>${d.bus.route_name}</b>${stopsHtml}</div>`;
+  } else {
+    const nb = d.next_buses.map((b) =>
+      `<div>${b.id} | ${b.operator} (${b.type}) | ${b.depart_time}${b.delay_min ? ' | Delayed ' + b.delay_min + ' min' : ''}</div>`).join('');
+    html = `<div class="answer no"><div class="big">NO</div>
+      <div class="sub">${d.bus.id} does not go to ${d.to}.</div></div>
+      <div class="stoplist"><b>This bus: ${d.bus.route_name}</b>${stopsHtml}</div>
+      <div class="stoplist"><b>Next buses to ${d.to}</b>${nb || '<div>No other bus found.</div>'}</div>`;
+  }
+  $('result').innerHTML = html;
+  window.lastCheck = d;
+}
+
+async function checkBus() {
+  const bus = parseBusId($('busId').value);
+  const stop = $('stopName').value.trim();
+  if (!bus || !stop) { $('result').innerHTML = '<p class="note">Enter the bus number and your stop.</p>'; return; }
+  let data;
+  try {
+    const r = await fetch('/api/check?bus=' + encodeURIComponent(bus) + '&stop=' + encodeURIComponent(stop));
+    data = await r.json();
+    if (data.error) { $('result').innerHTML = '<p class="note">' + data.error + '</p>'; return; }
+  } catch (e) {
+    data = checkOffline(bus, stop);
+    if (!data) { $('result').innerHTML = '<p class="note">Offline and no saved data for this bus. Download the district first.</p>'; return; }
+  }
+  renderResult(data);
+}
+$('checkBtn').addEventListener('click', checkBus);

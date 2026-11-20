@@ -23,7 +23,14 @@
     </section>
 
     <section id="view-scan" class="view">
-      <p class="note">QR scan and YES/NO check come in the next step.</p>
+      <label for="busId">Bus number</label>
+      <input id="busId" placeholder="e.g. HP01A1001">
+      <button id="scanBtn" class="gold">Scan bus QR</button>
+      <div id="reader"></div>
+      <label for="stopName">Your stop</label>
+      <input id="stopName" placeholder="e.g. Chhota Shimla">
+      <button id="checkBtn" class="green">Check</button>
+      <div id="result"></div>
     </section>
 
     <section id="view-alerts" class="view">
@@ -37,6 +44,7 @@
     <button class="tab" data-view="view-alerts">Alerts</button>
   </nav>
 
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
