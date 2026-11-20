@@ -104,5 +104,10 @@ app.get('/api/download/:district', (req, res) => {
   res.json({ district: d.name, downloaded_at: new Date().toISOString(), buses, routes });
 });
 
+// Scanning a QR opens the app for that bus
+app.get('/b/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`SafarSathi running at http://localhost:${PORT}`));

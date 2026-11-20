@@ -2,11 +2,13 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SafarSathi QR codes</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; }
-    .card { text-align: center; border: 1px solid #ccc; padding: 12px; border-radius: 8px; }
+    .card { text-align: center; border: 1px solid #ccc; padding: 12px; border-radius: 8px; width: 180px; }
+    .card p { font-size: 13px; margin: 8px 0 0; }
   </style>
 </head>
 <body>
@@ -19,7 +21,7 @@
         div.appendChild(box);
         div.insertAdjacentHTML('beforeend', '<p><b>' + b.id + '</b><br>' + b.route_name + '</p>');
         document.body.appendChild(div);
-        new QRCode(box, { text: 'busapp.in/b/' + b.id, width: 140, height: 140 });
+        new QRCode(box, { text: location.origin + '/b/' + b.id, width: 140, height: 140 });
       });
     });
   </script>

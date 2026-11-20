@@ -18,7 +18,8 @@ const T = {
     scannerMissing: 'Scanner not loaded. Type the bus number instead.',
     noCamera: 'Camera not available. Type the bus number instead.',
     checkFirst: 'Check a bus that goes to your stop first (Scan tab).',
-    alarmSet: 'Alarm set. It will ring in', alarmBefore: 'min, before', wakeUp: 'WAKE UP!', isComing: 'is coming.',
+    alarmSet: 'Alarm set. It will ring in about', alarmBefore: 'min, before', wakeUp: 'WAKE UP!', isComing: 'is coming.',
+    keepOpen: 'Keep this screen open.', demoCount: 'The bus time has already passed, so this demo counts from now.',
     testRing: 'WAKE UP! Test alarm ringing.', testIn: 'Test alarm will ring in 10 seconds.', stopped: 'Alarm stopped.',
     goesTo: 'goes to', stopWord: 'Stop', of: 'of', notGo: 'does not go to'
   },
@@ -39,7 +40,8 @@ const T = {
     scannerMissing: 'स्कैनर लोड नहीं हुआ। बस नंबर खुद लिखें।',
     noCamera: 'कैमरा उपलब्ध नहीं है। बस नंबर खुद लिखें।',
     checkFirst: 'पहले Scan टैब में ऐसी बस जाँचें जो आपके स्टॉप जाती हो।',
-    alarmSet: 'अलार्म सेट हो गया। यह बजेगा', alarmBefore: 'मिनट में, इससे पहले:', wakeUp: 'जागिए!', isComing: 'आने वाला है।',
+    alarmSet: 'अलार्म सेट हो गया। यह लगभग', alarmBefore: 'मिनट में बजेगा, इससे पहले:', wakeUp: 'जागिए!', isComing: 'आने वाला है।',
+    keepOpen: 'इस स्क्रीन को खुला रखें।', demoCount: 'बस का समय निकल चुका है, इसलिए यह डेमो अभी से गिनता है।',
     testRing: 'जागिए! टेस्ट अलार्म बज रहा है।', testIn: 'टेस्ट अलार्म 10 सेकंड में बजेगा।', stopped: 'अलार्म बंद हो गया।',
     goesTo: 'जाती है:', stopWord: 'स्टॉप', of: '/', notGo: 'नहीं जाती:'
   }
@@ -224,10 +226,16 @@ async function checkBus() {
 }
 $('checkBtn').addEventListener('click', checkBus);
 
-let alarmTimer, beepTimer, audioCtx;
+// ---------- Alarm: clock-based, checked every second, screen kept awake ----------
+let alarmTimer, beepTimer, audioCtx, alarmAt = null, alarmMsg = '', wakeLock = null;
+
+async function keepAwake() {
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+}
 
 function ringNow(msg) {
   $('alarmStatus').textContent = msg;
+  clearInterval(alarmTimer);
   clearInterval(beepTimer);
   beepTimer = setInterval(() => {
     const o = audioCtx.createOscillator();
@@ -239,33 +247,62 @@ function ringNow(msg) {
   }, 700);
 }
 
-function setAlarm(mins, msg) {
+function setAlarmAt(timestamp, msg) {
   audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
   audioCtx.resume();
-  clearTimeout(alarmTimer);
+  keepAwake();
+  clearInterval(alarmTimer);
   clearInterval(beepTimer);
-  alarmTimer = setTimeout(() => ringNow(msg), mins * 60000);
+  alarmAt = timestamp;
+  alarmMsg = msg;
+  alarmTimer = setInterval(() => {
+    if (alarmAt && Date.now() >= alarmAt) { alarmAt = null; ringNow(alarmMsg); }
+  }, 1000);
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && alarmAt) keepAwake();
+});
 
 $('alarmBtn').addEventListener('click', () => {
   const d = window.lastCheck;
   if (!d || !d.goes) { $('alarmStatus').textContent = t('checkFirst'); return; }
   const stop = d.stops.find((s) => s.seq === d.stop_number);
-  const mins = Math.max(stop.offset_min - 5, 0);
   const label = stopLabel(stop);
-  setAlarm(mins, t('wakeUp') + ' ' + label + ' ' + t('isComing'));
-  $('alarmStatus').textContent = t('alarmSet') + ' ' + mins + ' ' + t('alarmBefore') + ' ' + label + '.';
+
+  // Real schedule: departure + delay + minutes to this stop - 5 min warning
+  const [h, m] = d.bus.depart_time.split(':').map(Number);
+  const dep = new Date(); dep.setHours(h, m, 0, 0);
+  let target = dep.getTime() + ((d.bus.delay_min || 0) + stop.offset_min - 5) * 60000;
+  let note = '';
+  if (target < Date.now() + 5000) {
+    // Demo fallback: the sample bus time has already passed, so count from now
+    target = Date.now() + Math.max(stop.offset_min - 5, 0) * 60000 + 5000;
+    note = ' ' + t('demoCount');
+  }
+  setAlarmAt(target, t('wakeUp') + ' ' + label + ' ' + t('isComing'));
+  const mins = Math.round((target - Date.now()) / 60000);
+  $('alarmStatus').textContent = t('alarmSet') + ' ' + mins + ' ' + t('alarmBefore') + ' ' + label + '. ' + t('keepOpen') + note;
 });
 
 $('testAlarmBtn').addEventListener('click', () => {
-  setAlarm(10 / 60, t('testRing'));
+  setAlarmAt(Date.now() + 10000, t('testRing'));
   $('alarmStatus').textContent = t('testIn');
 });
 
 $('stopAlarmBtn').addEventListener('click', () => {
-  clearTimeout(alarmTimer);
+  clearInterval(alarmTimer);
   clearInterval(beepTimer);
+  alarmAt = null;
+  if (wakeLock) wakeLock.release().catch(() => {});
   $('alarmStatus').textContent = t('stopped');
 });
+
+// ---------- Opened from a bus QR (e.g. /b/HP01A1002) ----------
+const qrMatch = location.pathname.match(/^\/b\/([^/]+)/);
+if (qrMatch) {
+  $('busId').value = decodeURIComponent(qrMatch[1]).toUpperCase();
+  document.querySelector('[data-view="view-scan"]').click();
+}
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
