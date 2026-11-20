@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SafarSathi</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>SafarSathi</h1>
+    <p>Smart bus companion for Himachal Pradesh</p>
+  </header>
+
+  <main>
+    <section id="view-home" class="view active">
+      <label for="district">Choose your district</label>
+      <select id="district"></select>
+      <button id="downloadBtn">Download district data</button>
+      <p id="status" class="note"></p>
+      <h2>Buses</h2>
+      <div id="busList"></div>
+    </section>
+
+    <section id="view-scan" class="view">
+      <p class="note">QR scan and YES/NO check come in the next step.</p>
+    </section>
+
+    <section id="view-alerts" class="view">
+      <p class="note">Wake-me alarm comes in a later step.</p>
+    </section>
+  </main>
+
+  <nav>
+    <button class="tab active" data-view="view-home">Home</button>
+    <button class="tab" data-view="view-scan">Scan</button>
+    <button class="tab" data-view="view-alerts">Alerts</button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>

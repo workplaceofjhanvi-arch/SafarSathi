@@ -1,0 +1,26 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: #f4f7f2; color: #1f2d1f; padding-bottom: 70px; }
+header { background: #1b5e20; color: #fff; padding: 16px; text-align: center; border-bottom: 4px solid #f9a825; }
+header h1 { margin: 0; font-size: 24px; }
+header p { margin: 4px 0 0; font-size: 13px; color: #ffe082; }
+main { max-width: 500px; margin: 0 auto; padding: 16px; }
+.view { display: none; }
+.view.active { display: block; }
+label { font-weight: bold; display: block; margin-bottom: 6px; }
+select { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #1b5e20; border-radius: 8px; }
+#downloadBtn { width: 100%; margin-top: 10px; padding: 12px; font-size: 16px; background: #f9a825; color: #1f2d1f; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.note { font-size: 13px; color: #555; }
+h2 { color: #1b5e20; margin-top: 20px; }
+.bus { background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); border-left: 6px solid #1b5e20; }
+.bus.private { border-left-color: #f9a825; }
+.bus .top { display: flex; justify-content: space-between; align-items: center; }
+.bus .id { font-weight: bold; }
+.bus .route { margin: 6px 0; font-size: 14px; }
+.bus .meta { font-size: 13px; color: #555; }
+.tag { padding: 4px 10px; border-radius: 12px; font-size: 12px; color: #fff; font-weight: bold; }
+.tag.ok { background: #2e7d32; }
+.tag.late { background: #ef6c00; }
+.tag.grey { background: #757575; }
+nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #1b5e20; }
+.tab { flex: 1; padding: 16px 0; background: none; border: none; color: #fff; font-size: 15px; cursor: pointer; }
+.tab.active { background: #2e7d32; border-top: 3px solid #f9a825; }
