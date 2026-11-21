@@ -21,7 +21,11 @@ const T = {
     alarmSet: 'Alarm set. It will ring in about', alarmBefore: 'min, before', wakeUp: 'WAKE UP!', isComing: 'is coming.',
     keepOpen: 'Keep this screen open.', demoCount: 'The bus time has already passed, so this demo counts from now.',
     testRing: 'WAKE UP! Test alarm ringing.', testIn: 'Test alarm will ring in 10 seconds.', stopped: 'Alarm stopped.',
-    goesTo: 'goes to', stopWord: 'Stop', of: 'of', notGo: 'does not go to'
+    goesTo: 'goes to', stopWord: 'Stop', of: 'of', notGo: 'does not go to',
+    fullRoute: 'Full route', stopsWord: 'stops', start: 'Start', end: 'End', getOff: 'Get off here',
+    busNotFound: 'Bus not found. Check the bus number.',
+    mapNote: 'Straight lines between stops, not the exact road.',
+    arrives: 'Arrives about', allStops: 'All stops on this route', tapBus: 'Tap a bus to see its full route.'
   },
   hi: {
     tagline: 'हिमाचल प्रदेश का स्मार्ट बस साथी', chooseDistrict: 'अपना ज़िला चुनें',
@@ -43,7 +47,11 @@ const T = {
     alarmSet: 'अलार्म सेट हो गया। यह लगभग', alarmBefore: 'मिनट में बजेगा, इससे पहले:', wakeUp: 'जागिए!', isComing: 'आने वाला है।',
     keepOpen: 'इस स्क्रीन को खुला रखें।', demoCount: 'बस का समय निकल चुका है, इसलिए यह डेमो अभी से गिनता है।',
     testRing: 'जागिए! टेस्ट अलार्म बज रहा है।', testIn: 'टेस्ट अलार्म 10 सेकंड में बजेगा।', stopped: 'अलार्म बंद हो गया।',
-    goesTo: 'जाती है:', stopWord: 'स्टॉप', of: '/', notGo: 'नहीं जाती:'
+    goesTo: 'जाती है:', stopWord: 'स्टॉप', of: '/', notGo: 'नहीं जाती:',
+    fullRoute: 'पूरा रास्ता', stopsWord: 'स्टॉप', start: 'शुरू', end: 'अंतिम', getOff: 'यहाँ उतरें',
+    busNotFound: 'बस नहीं मिली। बस नंबर जाँचें।',
+    mapNote: 'स्टॉप के बीच सीधी रेखाएँ, असली सड़क नहीं।',
+    arrives: 'लगभग पहुँचेगी', allStops: 'इस रास्ते के सभी स्टॉप', tapBus: 'पूरा रास्ता देखने के लिए बस पर टैप करें।'
   }
 };
 let lang = localStorage.getItem('lang') || 'en';
@@ -122,17 +130,121 @@ async function showBuses() {
   }).join('');
 }
 
+function parseBusId(text) {
+  return text.trim().split('/').pop().toUpperCase();
+}
+
+// ---------- Route map (Leaflet + OpenStreetMap), shown only after Check ----------
+let routeMapObj = null, routeBounds = null;
+
+function fitRouteMap() {
+  if (!routeMapObj || !routeBounds) return;
+  routeMapObj.invalidateSize();
+  routeMapObj.fitBounds(routeBounds, { padding: [40, 40] });
+}
+
+function clearRoute() {
+  if (routeMapObj) { routeMapObj.remove(); routeMapObj = null; routeBounds = null; }
+  $('routeCard').innerHTML = '';
+}
+
+function clearResult() {
+  $('result').innerHTML = '';
+  clearRoute();
+  window.lastCheck = null;
+}
+
+function routeHeader(bus, stops) {
+  return `<div class="rhead"><b>${bus.id}</b> | ${bus.operator} (${bus.type})<br>${bus.route_name}<br>
+    <span class="note">${stopLabel(stops[0])} &rarr; ${stopLabel(stops[stops.length - 1])} | ${t('fullRoute')}: ${stops.length} ${t('stopsWord')}</span></div>`;
+}
+
+function routeTimeline(bus, stops, want) {
+  const delay = bus.delay_min || 0;
+  const rows = stops.map((s, i) => {
+    const isStart = i === 0, isEnd = i === stops.length - 1;
+    const mine = want && s.name.toLowerCase() === want;
+    const clock = addMinutes(bus.depart_time, delay + s.offset_min);
+    const badge = mine ? `<span class="badge">${t('getOff')}</span>`
+      : isStart ? `<span class="badge soft">${t('start')}</span>`
+      : isEnd ? `<span class="badge soft">${t('end')}</span>` : '';
+    return `<div class="rstop ${mine ? 'mine' : ''} ${isStart ? 'first' : ''} ${isEnd ? 'last' : ''}">
+      <div class="dot"></div>
+      <div class="rname">${stopLabel(s)} ${badge}</div>
+      <div class="rtime">${clock} (+${s.offset_min} ${t('min')})</div>
+    </div>`;
+  }).join('');
+  return `<div class="timeline">${rows}</div>`;
+}
+
+// Trip summary + map + full stop list
+function renderRoute(bus, stops, highlight) {
+  const want = (highlight || '').trim().toLowerCase();
+  if (routeMapObj) { routeMapObj.remove(); routeMapObj = null; routeBounds = null; }
+
+  const di = want ? stops.findIndex((s) => s.name.toLowerCase() === want) : -1;
+  let journey = '';
+  if (di > 0) {
+    const s = stops[di];
+    const clock = addMinutes(bus.depart_time, (bus.delay_min || 0) + s.offset_min);
+    journey = `<div class="journey">${t('yourStop')}: <b>${stopLabel(s)}</b><br>
+      ${t('stopWord')} ${di + 1} ${t('of')} ${stops.length} | ${t('arrives')} ${clock}</div>`;
+  }
+
+  const canMap = typeof L !== 'undefined' && stops.every((s) => s.lat != null && s.lng != null);
+  if (!canMap) {
+    $('routeCard').innerHTML = `<div class="routecard">${routeHeader(bus, stops)}${journey}${routeTimeline(bus, stops, want)}</div>`;
+    return;
+  }
+
+  $('routeCard').innerHTML = `<div class="routecard">${routeHeader(bus, stops)}${journey}
+    <div id="routeMap"></div><p class="note">${t('mapNote')}</p>
+    <div class="alllist"><div class="ltitle">${t('allStops')}</div>${routeTimeline(bus, stops, want)}</div></div>`;
+
+  const map = L.map('routeMap');
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const pts = stops.map((s) => [s.lat, s.lng]);
+  L.polyline(pts, { color: '#1b5e20', weight: 5, opacity: 0.9 }).addTo(map);
+
+  const delay = bus.delay_min || 0;
+  stops.forEach((s, i) => {
+    const isStart = i === 0, isEnd = i === stops.length - 1;
+    const mine = want && s.name.toLowerCase() === want;
+    const color = mine ? '#e65100' : isStart ? '#1b5e20' : isEnd ? '#c62828' : '#ffffff';
+    const fill = mine ? '#f9a825' : isStart ? '#2e7d32' : isEnd ? '#c62828' : '#ffffff';
+    const clock = addMinutes(bus.depart_time, delay + s.offset_min);
+    const tag = mine ? ' - ' + t('getOff') : isStart ? ' - ' + t('start') : isEnd ? ' - ' + t('end') : '';
+    const cls = 'stoptip' + (mine ? ' mine' : isStart ? ' start' : isEnd ? ' end' : '');
+    L.circleMarker([s.lat, s.lng], {
+      radius: mine ? 12 : (isStart || isEnd) ? 9 : 7, color: color, weight: 3, fillColor: fill, fillOpacity: 1
+    }).addTo(map)
+      .bindTooltip(`${stopLabel(s)}${tag}<br>${clock}`, { permanent: true, direction: 'top', offset: [0, -8], className: cls });
+  });
+
+  routeBounds = L.latLngBounds(pts);
+  routeMapObj = map;
+  fitRouteMap();
+  setTimeout(fitRouteMap, 200);
+}
+
 document.querySelectorAll('.tab').forEach((tb) => {
   tb.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active'));
     document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
     tb.classList.add('active');
     $(tb.dataset.view).classList.add('active');
+    setTimeout(fitRouteMap, 100);
   });
 });
 
 $('district').addEventListener('change', showBuses);
 $('downloadBtn').addEventListener('click', downloadDistrict);
+
+// Changing the bus number clears the old result. Nothing new is shown until Check.
+$('busId').addEventListener('input', clearResult);
 
 $('langBtn').addEventListener('click', () => {
   lang = lang === 'en' ? 'hi' : 'en';
@@ -145,10 +257,6 @@ $('langBtn').addEventListener('click', () => {
 applyLang();
 loadDistricts().then(showBuses);
 
-function parseBusId(text) {
-  return text.trim().split('/').pop().toUpperCase();
-}
-
 let scanner;
 $('scanBtn').addEventListener('click', () => {
   if (typeof Html5Qrcode === 'undefined') { alert(t('scannerMissing')); return; }
@@ -156,6 +264,8 @@ $('scanBtn').addEventListener('click', () => {
   scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, (text) => {
     $('busId').value = parseBusId(text);
     scanner.stop().then(() => scanner.clear());
+    clearResult();
+    $('stopName').focus();
   }).catch(() => alert(t('noCamera')));
 });
 
@@ -188,24 +298,26 @@ function checkOffline(busId, stop) {
 
 function renderResult(d) {
   const mine = (s) => s.name.toLowerCase() === d.to.toLowerCase();
-  const stopsHtml = d.stops.map((s) =>
-    `<div class="${mine(s) ? 'mine' : ''}">${s.seq}. ${stopLabel(s)} +${s.offset_min} ${t('min')}</div>`).join('');
   const hit = d.stops.find(mine);
   const toLabel = hit ? stopLabel(hit) : d.to;
   let html;
   if (d.goes) {
     html = `<div class="answer yes"><div class="big">${t('yes')}</div>
-      <div class="sub">${d.bus.id} ${t('goesTo')} ${toLabel}. ${t('stopWord')} ${d.stop_number} ${t('of')} ${d.total_stops}.</div></div>
-      <div class="stoplist"><b>${d.bus.route_name}</b>${stopsHtml}</div>`;
+      <div class="sub">${d.bus.id} ${t('goesTo')} ${toLabel}. ${t('stopWord')} ${d.stop_number} ${t('of')} ${d.total_stops}.</div></div>`;
   } else {
     const nb = d.next_buses.map((b) =>
-      `<div>${b.id} | ${b.operator} (${b.type}) | ${b.depart_time}${b.delay_min ? ' | ' + t('delayed') + ' ' + b.delay_min + ' ' + t('min') : ''}</div>`).join('');
+      `<button class="nextbus" data-bus="${b.id}"><b>${b.id}</b> | ${b.operator} (${b.type})<br>
+        <small>${b.depart_time}${b.delay_min ? ' | ' + t('delayed') + ' ' + b.delay_min + ' ' + t('min') : ''}</small></button>`).join('');
     html = `<div class="answer no"><div class="big">${t('no')}</div>
       <div class="sub">${d.bus.id} ${t('notGo')} ${toLabel}.</div></div>
-      <div class="stoplist"><b>${t('thisBus')}: ${d.bus.route_name}</b>${stopsHtml}</div>
-      <div class="stoplist"><b>${t('nextBuses')} ${toLabel}</b>${nb || '<div>' + t('noOther') + '</div>'}</div>`;
+      <div class="stoplist"><b>${t('nextBuses')} ${toLabel}</b>
+      ${nb ? '<p class="note">' + t('tapBus') + '</p>' + nb : '<div>' + t('noOther') + '</div>'}</div>`;
   }
   $('result').innerHTML = html;
+  $('result').querySelectorAll('.nextbus').forEach((btn) => {
+    btn.addEventListener('click', () => { $('busId').value = btn.dataset.bus; checkBus(); });
+  });
+  renderRoute(d.bus, d.stops, d.to);
   window.lastCheck = d;
 }
 
@@ -217,12 +329,13 @@ async function checkBus() {
   try {
     const r = await fetch('/api/check?bus=' + encodeURIComponent(bus) + '&stop=' + encodeURIComponent(stop));
     data = await r.json();
-    if (data.error) { $('result').innerHTML = '<p class="note">' + data.error + '</p>'; return; }
+    if (data.error) { clearRoute(); $('result').innerHTML = '<p class="note">' + data.error + '</p>'; return; }
   } catch (e) {
     data = checkOffline(bus, stop);
     if (!data) { $('result').innerHTML = '<p class="note">' + t('offlineNoData') + '</p>'; return; }
   }
   renderResult(data);
+  $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 $('checkBtn').addEventListener('click', checkBus);
 
@@ -298,11 +411,12 @@ $('stopAlarmBtn').addEventListener('click', () => {
   $('alarmStatus').textContent = t('stopped');
 });
 
-// ---------- Opened from a bus QR (e.g. /b/HP01A1002) ----------
+// ---------- Opened from a bus QR (e.g. /b/HP01A1002): only fill the bus number ----------
 const qrMatch = location.pathname.match(/^\/b\/([^/]+)/);
 if (qrMatch) {
   $('busId').value = decodeURIComponent(qrMatch[1]).toUpperCase();
   document.querySelector('[data-view="view-scan"]').click();
+  $('stopName').focus();
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');

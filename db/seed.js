@@ -9,7 +9,7 @@ db.pragma('foreign_keys = ON');
 
 db.exec(`
 CREATE TABLE districts (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL);
-CREATE TABLE stops (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL, name_hi TEXT);
+CREATE TABLE stops (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL, name_hi TEXT, lat REAL, lng REAL);
 CREATE TABLE routes (
   id INTEGER PRIMARY KEY,
   code TEXT UNIQUE NOT NULL,
@@ -41,8 +41,28 @@ const HI = {
   'Gagret': 'गगरेट', 'Amb': 'अंब'
 };
 
+// APPROXIMATE coordinates [latitude, longitude]. Check each one in Google Maps
+// (right-click the place, click the numbers to copy) and correct them here.
+const COORDS = {
+  'IGMC': [31.1020, 77.1830],
+  'Chhota Shimla': [31.0905, 77.1950],
+  'Lakkar Bazaar': [31.1030, 77.1690],
+  'Victory Tunnel': [31.0960, 77.1560],
+  'Bus Stand': [31.1045, 77.1685],
+  'ISBT': [31.0885, 77.1360],
+  'Shoghi': [31.0120, 77.0200],
+  'Bilaspur': [31.3390, 76.7560],
+  'Ghumarwin': [31.4380, 76.7080],
+  'Una': [31.4685, 76.2708],
+  'Solan': [30.9045, 77.0967],
+  'Nalagarh': [31.0450, 76.7240],
+  'Una Bus Stand': [31.4685, 76.2708],
+  'Gagret': [31.6000, 76.1600],
+  'Amb': [31.6950, 76.1200]
+};
+
 const insDistrict = db.prepare('INSERT INTO districts (name) VALUES (?)');
-const insStop = db.prepare('INSERT INTO stops (name, name_hi) VALUES (?, ?)');
+const insStop = db.prepare('INSERT INTO stops (name, name_hi, lat, lng) VALUES (?, ?, ?, ?)');
 const findStop = db.prepare('SELECT id FROM stops WHERE name = ?');
 const insRoute = db.prepare('INSERT INTO routes (code, name, district_id) VALUES (?, ?, ?)');
 const insRouteStop = db.prepare('INSERT INTO route_stops (route_id, stop_id, seq, offset_min) VALUES (?, ?, ?, ?)');
@@ -51,7 +71,8 @@ const insBus = db.prepare('INSERT INTO buses (id, operator, type, route_id, depa
 function stopId(name) {
   const row = findStop.get(name);
   if (row) return row.id;
-  return insStop.run(name, HI[name] || null).lastInsertRowid;
+  const c = COORDS[name] || [null, null];
+  return insStop.run(name, HI[name] || null, c[0], c[1]).lastInsertRowid;
 }
 
 function addRoute(code, name, districtId, stops) {

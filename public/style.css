@@ -37,4 +37,18 @@ button.green { background: #1b5e20; color: #fff; }
 .answer .sub { font-size: 16px; margin-top: 6px; }
 .stoplist { background: #fff; border-radius: 10px; padding: 12px; margin-top: 12px; }
 .stoplist div { padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px; }
-.stoplist .mine { background: #fff8e1; font-weight: bold; border-left: 4px solid #f9a825; padding-left: 8px; }
+.stoplist .mine { background: #fff8e1; font-weight: bold; border-left: 4px solid #f9a825; padding-left: 8px;
+}
+/* Route map */
+#routeMap { height: 300px; width: 100%; border-radius: 10px; margin-top: 6px; z-index: 0; }
+.stoptip { font-size: 11px; font-weight: bold; line-height: 1.25; padding: 2px 6px; text-align: center; }
+.stoptip.mine { background: #f9a825; border-color: #e65100; color: #1f2d1f; }
+.stoptip.end { background: #ffebee; border-color: #c62828; }
+.stoptip.start { background: #e8f5e9; border-color: #1b5e20; }
+/* Trip summary, full stop list, next-bus buttons */
+.routecard { margin-top: 14px; }
+.journey { background: #fff8e1; border-left: 4px solid #f9a825; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; line-height: 1.5; }
+.alllist { background: #fff; border-radius: 10px; padding: 14px; margin-top: 12px; border: 1px solid #e0e0e0; }
+.alllist .ltitle { font-weight: bold; color: #1b5e20; margin-bottom: 12px; }
+.nextbus { display: block; width: 100%; text-align: left; background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 10px; margin-top: 8px; font-size: 14px; cursor: pointer; color: #1f2d1f; }
+.nextbus small { color: #555; }
